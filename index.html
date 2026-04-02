@@ -13,7 +13,6 @@ body {
   padding:15px;
 }
 
-/* LOGIN */
 #loginPage {
   height:100vh;
   display:flex;
@@ -22,22 +21,20 @@ body {
   gap:10px;
 }
 
-#loginPage input, #loginPage button {
-  padding:12px;
+input, select, button {
+  padding:10px;
   border-radius:10px;
   border:none;
 }
 
-/* APP */
+.hidden { display:none; }
+
 #app { display:none; }
 
 h2 { text-align:center; }
 
 #searchBox {
   width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:none;
   margin-bottom:10px;
 }
 
@@ -51,9 +48,6 @@ h2 { text-align:center; }
   flex:1;
   background:#00c853;
   color:white;
-  border:none;
-  border-radius:10px;
-  padding:10px;
 }
 
 .form {
@@ -63,14 +57,6 @@ h2 { text-align:center; }
   margin-bottom:10px;
   display:grid;
   gap:8px;
-}
-
-.hidden { display:none; }
-
-input {
-  padding:10px;
-  border-radius:10px;
-  border:none;
 }
 
 .stats {
@@ -99,11 +85,6 @@ input {
   border-radius:14px;
 }
 
-.item-name {
-  font-size:14px;
-  font-weight:bold;
-}
-
 .row {
   display:flex;
   justify-content:space-between;
@@ -112,21 +93,8 @@ input {
 
 .total {
   color:#00e676;
+  font-weight:bold;
   margin-top:5px;
-  font-weight:bold;
-}
-
-/* HISTORY */
-.bill {
-  background:rgba(255,255,255,0.08);
-  padding:10px;
-  border-radius:10px;
-  margin-bottom:10px;
-}
-
-.bill-title {
-  font-weight:bold;
-  margin-bottom:5px;
 }
 </style>
 </head>
@@ -136,7 +104,7 @@ input {
 <!-- LOGIN -->
 <div id="loginPage">
   <h2>🔐 Login</h2>
-  <input type="password" id="password" placeholder="Enter Password">
+  <input type="password" id="password" placeholder="Password">
   <button onclick="checkLogin()">Login</button>
 </div>
 
@@ -151,18 +119,26 @@ input {
   <button onclick="toggleSale()">🧾 Sale</button>
   <button onclick="toggleItem()">📦 Item</button>
   <button onclick="loadHistory()">📜 History</button>
-  <button onclick="logout()">🚪 Logout</button>
+  <button onclick="logout()">🚪</button>
 </div>
 
+<!-- SALE FORM -->
 <div id="saleForm" class="form hidden">
   <input id="billNo" placeholder="Bill No">
-  <input id="item" placeholder="Item Name">
-  <input id="color" placeholder="Color">
+
+  <!-- ITEM DROPDOWN -->
+  <select id="item" onchange="loadColors()"></select>
+
+  <!-- COLOR DROPDOWN -->
+  <select id="color"></select>
+
   <input id="bundle" type="number" placeholder="Bundle">
   <input id="loose" type="number" placeholder="Loose">
+
   <button onclick="saveSale()">Save Sale</button>
 </div>
 
+<!-- ADD ITEM -->
 <div id="itemForm" class="form hidden">
   <input id="newItem" placeholder="Item Name">
   <input id="newColor" placeholder="Color">
@@ -186,20 +162,19 @@ const url = "https://script.google.com/macros/s/AKfycbwZmwbGADEsZuZLthqrj5IhNv0w
 const APP_PASSWORD = "tele2026";
 
 let searchValue = "";
+let globalData = [];
 
 /* LOGIN */
 function checkLogin() {
   if (password.value === APP_PASSWORD) {
     localStorage.setItem("login","1");
     showApp();
-  } else {
-    alert("Wrong Password ❌");
-  }
+  } else alert("Wrong ❌");
 }
 
 function showApp() {
-  loginPage.style.display = "none";
-  app.style.display = "block";
+  loginPage.style.display="none";
+  app.style.display="block";
   loadData();
 }
 
@@ -208,79 +183,108 @@ function logout() {
   location.reload();
 }
 
-if (localStorage.getItem("login") === "1") showApp();
+if(localStorage.getItem("login")=="1") showApp();
 
-/* DATA */
+/* LOAD DATA */
 function loadData() {
   historySection.classList.add("hidden");
-  stockContainer.innerHTML = "";
 
   fetch(url)
-    .then(res => res.json())
-    .then(data => displayData(data));
+    .then(res=>res.json())
+    .then(data=>{
+      globalData = data;
+      displayData(data);
+      loadItemsDropdown();
+    });
 }
 
+/* DROPDOWN ITEM */
+function loadItemsDropdown() {
+  let items = [...new Set(globalData.map(i=>i.name))];
+
+  item.innerHTML="";
+  items.forEach(n=>{
+    item.innerHTML += `<option value="${n}">${n}</option>`;
+  });
+
+  loadColors();
+}
+
+/* DROPDOWN COLOR */
+function loadColors() {
+  let selected = item.value;
+
+  let colors = globalData
+    .filter(i=>i.name==selected)
+    .map(i=>i.color || "No Color");
+
+  color.innerHTML="";
+  colors.forEach(c=>{
+    color.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+}
+
+/* DISPLAY */
 function displayData(data) {
-  data = data.filter(i => i.name);
+  data = data.filter(i=>i.name);
 
   let grouped = {};
   let totalQty = 0;
 
-  data.forEach(i => {
-    if (!grouped[i.name]) grouped[i.name] = [];
+  data.forEach(i=>{
+    if(!grouped[i.name]) grouped[i.name]=[];
     grouped[i.name].push(i);
   });
 
-  for (let name in grouped) {
-    if (!name.toLowerCase().includes(searchValue)) continue;
+  stockContainer.innerHTML="";
 
-    let total = 0;
-    let rows = "";
+  for(let name in grouped){
+    if(!name.toLowerCase().includes(searchValue)) continue;
 
-    grouped[name].forEach(i => {
-      let qty = i.bundle + i.loose;
-      total += qty;
-      totalQty += qty;
+    let total=0, rows="";
 
-      rows += `
-        <div class="row">
-          <span>${i.color || "No Color"}</span>
-          <span>${i.bundle}/${i.loose} = ${qty}</span>
-        </div>
-      `;
+    grouped[name].forEach(i=>{
+      let qty=i.bundle+i.loose;
+      total+=qty;
+      totalQty+=qty;
+
+      rows+=`
+      <div class="row">
+        <span>${i.color||"No Color"}</span>
+        <span>${i.bundle}/${i.loose}=${qty}</span>
+      </div>`;
     });
 
-    stockContainer.innerHTML += `
-      <div class="card">
-        <div class="item-name">${name}</div>
-        ${rows}
-        <div class="total">Qty: ${total}</div>
-      </div>
-    `;
+    stockContainer.innerHTML+=`
+    <div class="card">
+      <b>${name}</b>
+      ${rows}
+      <div class="total">Qty: ${total}</div>
+    </div>`;
   }
 
   items.innerText = Object.keys(grouped).length;
   qty.innerText = totalQty;
 }
 
-function filterItems() {
-  searchValue = searchBox.value.toLowerCase();
-  loadData();
+/* SEARCH */
+function filterItems(){
+  searchValue=searchBox.value.toLowerCase();
+  displayData(globalData);
 }
 
-/* FORMS */
-function toggleSale() {
+/* TOGGLE */
+function toggleSale(){
   saleForm.classList.toggle("hidden");
   itemForm.classList.add("hidden");
 }
-
-function toggleItem() {
+function toggleItem(){
   itemForm.classList.toggle("hidden");
   saleForm.classList.add("hidden");
 }
 
-/* SAVE */
-function saveSale() {
+/* SAVE SALE */
+function saveSale(){
   fetch(url,{
     method:"POST",
     body:JSON.stringify({
@@ -290,10 +294,14 @@ function saveSale() {
       bundle:bundle.value,
       loose:loose.value
     })
-  }).then(()=>{alert("Saved ✅");loadData();});
+  }).then(()=>{
+    alert("Saved ✅");
+    loadData();
+  });
 }
 
-function addItem() {
+/* ADD ITEM */
+function addItem(){
   fetch(url,{
     method:"POST",
     body:JSON.stringify({
@@ -303,14 +311,17 @@ function addItem() {
       bundle:newBundle.value,
       loose:newLoose.value
     })
-  }).then(()=>{alert("Item Added ✅");loadData();});
+  }).then(()=>{
+    alert("Item Added ✅");
+    loadData();
+  });
 }
 
 /* HISTORY */
-function loadHistory() {
-  stockContainer.innerHTML = "";
+function loadHistory(){
+  stockContainer.innerHTML="";
   historySection.classList.remove("hidden");
-  historySection.innerHTML = "";
+  historySection.innerHTML="";
 
   fetch(url+"?type=history")
     .then(res=>res.json())
@@ -336,8 +347,8 @@ function loadHistory() {
         });
 
         historySection.innerHTML+=`
-        <div class="bill">
-          <div class="bill-title">Bill: ${bill}</div>
+        <div class="card">
+          <b>Bill: ${bill}</b>
           ${rows}
         </div>`;
       }
