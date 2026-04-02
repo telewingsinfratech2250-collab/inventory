@@ -12,6 +12,11 @@ body {
   padding:15px;
 }
 
+/* 🔥 IMPORTANT FIX */
+.hidden {
+  display: none !important;
+}
+
 #loginPage {
   height:100vh;
   display:flex;
@@ -26,7 +31,6 @@ input, select, button {
   border:none;
 }
 
-.hidden { display:none; }
 #app { display:none; }
 
 h2 { text-align:center; }
@@ -179,13 +183,22 @@ function logout(){
 
 if(localStorage.getItem("login")=="1") showApp();
 
-/* COMMON */
+/* 🔥 FORCE HIDE ON LOAD */
+window.onload = function () {
+  hideAllForms();
+};
+
+/* 🔥 MASTER HIDE */
 function hideAllForms(){
   saleForm.classList.add("hidden");
   itemForm.classList.add("hidden");
+
+  // force hide
+  saleForm.style.display = "none";
+  itemForm.style.display = "none";
 }
 
-/* LOAD DATA */
+/* LOAD */
 function loadData(force=false){
   let now=Date.now();
 
@@ -274,17 +287,21 @@ function filterItems(){
   displayData(globalData);
 }
 
-/* TOGGLE */
+/* SHOW FORMS */
 function toggleSale(){
   hideAllForms();
   historySection.classList.add("hidden");
+
   saleForm.classList.remove("hidden");
+  saleForm.style.display = "grid";
 }
 
 function toggleItem(){
   hideAllForms();
   historySection.classList.add("hidden");
+
   itemForm.classList.remove("hidden");
+  itemForm.style.display = "grid";
 }
 
 /* SAVE */
