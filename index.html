@@ -12,9 +12,12 @@ body {
   padding:15px;
 }
 
-/* 🔥 IMPORTANT FIX */
-.hidden {
-  display: none !important;
+.hidden { display:none !important; }
+
+input, select, button {
+  padding:10px;
+  border-radius:10px;
+  border:none;
 }
 
 #loginPage {
@@ -25,17 +28,7 @@ body {
   gap:10px;
 }
 
-input, select, button {
-  padding:10px;
-  border-radius:10px;
-  border:none;
-}
-
 #app { display:none; }
-
-h2 { text-align:center; }
-
-#searchBox { width:100%; margin-bottom:10px; }
 
 .action-bar {
   display:flex;
@@ -49,7 +42,6 @@ h2 { text-align:center; }
   color:white;
 }
 
-/* FORM */
 .form {
   background:rgba(255,255,255,0.08);
   padding:10px;
@@ -59,22 +51,6 @@ h2 { text-align:center; }
   gap:8px;
 }
 
-/* STATS */
-.stats {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-  gap:10px;
-  margin-bottom:10px;
-}
-
-.stat {
-  background:rgba(255,255,255,0.1);
-  padding:10px;
-  border-radius:10px;
-  text-align:center;
-}
-
-/* GRID */
 .grid {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -90,63 +66,48 @@ h2 { text-align:center; }
 .row {
   display:flex;
   justify-content:space-between;
-  font-size:12px;
 }
 
 .total {
   color:#00e676;
   font-weight:bold;
-  margin-top:5px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginPage">
   <h2>🔐 Login</h2>
   <input type="password" id="password">
   <button onclick="checkLogin()">Login</button>
 </div>
 
-<!-- APP -->
 <div id="app">
 
 <h2>📦 Stock ERP</h2>
 
-<input id="searchBox" placeholder="🔍 Search..." onkeyup="filterItems()">
-
 <div class="action-bar">
-  <button onclick="goHome()">🏠 Home</button>
-  <button onclick="toggleSale()">🧾 Sale</button>
-  <button onclick="toggleItem()">📦 Item</button>
-  <button onclick="loadHistory()">📜 History</button>
+  <button onclick="goHome()">🏠</button>
+  <button onclick="toggleSale()">🧾</button>
+  <button onclick="toggleItem()">📦</button>
+  <button onclick="loadHistory()">📜</button>
   <button onclick="logout()">🚪</button>
 </div>
 
-<!-- SALE -->
 <div id="saleForm" class="form hidden">
   <input id="billNo" placeholder="Bill No">
-  <select id="item" onchange="loadColors()"></select>
-  <select id="color"></select>
+  <select id="item"></select>
   <input id="bundle" type="number" placeholder="Bundle">
   <input id="loose" type="number" placeholder="Loose">
-  <button onclick="saveSale()">Save Sale</button>
+  <button onclick="saveSale()">Save</button>
 </div>
 
-<!-- ITEM -->
 <div id="itemForm" class="form hidden">
   <input id="newItem" placeholder="Item Name">
-  <input id="newColor" placeholder="Color">
   <input id="newBundle" type="number" placeholder="Bundle">
   <input id="newLoose" type="number" placeholder="Loose">
-  <button onclick="addItem()">Save Item</button>
-</div>
-
-<div class="stats">
-  <div class="stat">Items: <span id="items"></span></div>
-  <div class="stat">Qty: <span id="qty"></span></div>
+  <button onclick="addItem()">Save</button>
 </div>
 
 <div id="stockContainer" class="grid"></div>
@@ -155,171 +116,88 @@ h2 { text-align:center; }
 </div>
 
 <script>
-const url = "https://script.google.com/macros/s/AKfycbzONxFORgQwFbFe7wwGUPzwpmDAn0yBxU1OHtIK4_y-TbsOqFIrwAllg40dIXMixsvMQw/exec";
+const url = "https://script.google.com/macros/s/AKfycbzShY5J9BiAYSrDl_RXdIbvcBk0JbQ4s3qha4JIkOrKXzjlpv43GZC18Cc7hekZXGdHQQ/exec";
 const APP_PASSWORD = "tele2026";
 
 let globalData = [];
-let searchValue = "";
-let lastFetchTime = 0;
 
-/* LOGIN */
 function checkLogin(){
   if(password.value===APP_PASSWORD){
     localStorage.setItem("login","1");
     showApp();
-  } else alert("Wrong ❌");
+  } else alert("Wrong");
 }
 
 function showApp(){
   loginPage.style.display="none";
   app.style.display="block";
-  loadData(true);
-}
-
-function logout(){
-  localStorage.removeItem("login");
-  location.reload();
+  loadData();
 }
 
 if(localStorage.getItem("login")=="1") showApp();
 
-/* 🔥 FORCE HIDE ON LOAD */
-window.onload = function () {
-  hideAllForms();
-};
-
-/* 🔥 MASTER HIDE */
 function hideAllForms(){
   saleForm.classList.add("hidden");
   itemForm.classList.add("hidden");
-
-  // force hide
-  saleForm.style.display = "none";
-  itemForm.style.display = "none";
 }
 
-/* LOAD */
-function loadData(force=false){
-  let now=Date.now();
-
-  if(!force && now-lastFetchTime<5000){
-    displayData(globalData);
-    return;
-  }
-
+function loadData(){
   fetch(url)
     .then(r=>r.json())
     .then(data=>{
       globalData=data;
-      lastFetchTime=now;
       displayData(data);
-      loadItemsDropdown();
+      loadItems();
     });
 }
 
-/* HOME */
-function goHome(){
-  hideAllForms();
-  historySection.classList.add("hidden");
-  loadData(true);
-}
-
-/* DROPDOWN */
-function loadItemsDropdown(){
-  let items=[...new Set(globalData.map(i=>i.name))];
+function loadItems(){
   item.innerHTML="";
-  items.forEach(n=>{
-    item.innerHTML+=`<option>${n}</option>`;
-  });
-  loadColors();
-}
-
-function loadColors(){
-  let selected=item.value;
-  let colors=globalData.filter(i=>i.name==selected).map(i=>i.color||"No Color");
-
-  color.innerHTML="";
-  colors.forEach(c=>{
-    color.innerHTML+=`<option>${c}</option>`;
+  globalData.forEach(i=>{
+    item.innerHTML+=`<option>${i.name}</option>`;
   });
 }
 
-/* DISPLAY */
 function displayData(data){
-  let grouped={}, totalQty=0;
   stockContainer.innerHTML="";
-
   data.forEach(i=>{
-    if(!grouped[i.name]) grouped[i.name]=[];
-    grouped[i.name].push(i);
-  });
-
-  for(let name in grouped){
-    if(!name.toLowerCase().includes(searchValue)) continue;
-
-    let total=0, rows="";
-    grouped[name].forEach(i=>{
-      let qty=i.bundle+i.loose;
-      total+=qty;
-      totalQty+=qty;
-
-      rows+=`<div class="row">
-        <span>${i.color||"No Color"}</span>
-        <span>${i.bundle}/${i.loose}=${qty}</span>
-      </div>`;
-    });
-
+    let qty=i.bundle+i.loose;
     stockContainer.innerHTML+=`
     <div class="card">
-      <b>${name}</b>
-      ${rows}
-      <div class="total">Qty: ${total}</div>
+      <b>${i.name}</b>
+      <div class="row">Bundle: ${i.bundle}</div>
+      <div class="row">Loose: ${i.loose}</div>
+      <div class="total">Total: ${qty}</div>
     </div>`;
-  }
-
-  items.innerText=Object.keys(grouped).length;
-  qty.innerText=totalQty;
+  });
 }
 
-/* SEARCH */
-function filterItems(){
-  searchValue=searchBox.value.toLowerCase();
-  displayData(globalData);
-}
-
-/* SHOW FORMS */
 function toggleSale(){
   hideAllForms();
-  historySection.classList.add("hidden");
-
   saleForm.classList.remove("hidden");
-  saleForm.style.display = "grid";
 }
 
 function toggleItem(){
   hideAllForms();
-  historySection.classList.add("hidden");
-
   itemForm.classList.remove("hidden");
-  itemForm.style.display = "grid";
 }
 
-/* SAVE */
+function goHome(){
+  hideAllForms();
+  historySection.classList.add("hidden");
+  loadData();
+}
+
 function saveSale(){
   fetch(url,{
     method:"POST",
     body:JSON.stringify({
       billNo:billNo.value,
       name:item.value,
-      color:color.value,
       bundle:bundle.value,
       loose:loose.value
     })
-  }).then(()=>{
-    alert("Saved ✅");
-    hideAllForms();
-    loadData(true);
-  });
+  }).then(()=>{ alert("Saved"); hideAllForms(); loadData(); });
 }
 
 function addItem(){
@@ -328,54 +206,30 @@ function addItem(){
     body:JSON.stringify({
       type:"addItem",
       name:newItem.value,
-      color:newColor.value,
       bundle:newBundle.value,
       loose:newLoose.value
     })
-  }).then(()=>{
-    alert("Item Added ✅");
-    hideAllForms();
-    loadData(true);
-  });
+  }).then(()=>{ alert("Added"); hideAllForms(); loadData(); });
 }
 
-/* HISTORY */
 function loadHistory(){
   hideAllForms();
-
   stockContainer.innerHTML="";
   historySection.classList.remove("hidden");
-  historySection.innerHTML="Loading...";
 
   fetch(url+"?type=history")
     .then(r=>r.json())
     .then(data=>{
-      let grouped={};
-
-      data.forEach(i=>{
-        if(!grouped[i.bill]) grouped[i.bill]=[];
-        grouped[i.bill].push(i);
-      });
-
       historySection.innerHTML="";
-
-      for(let bill in grouped){
-        let rows="";
-        grouped[bill].forEach(i=>{
-          let qty=i.bundle+i.loose;
-
-          rows+=`<div class="row">
-            <span>${i.name} (${i.color||"No Color"})</span>
-            <span>${i.bundle}/${i.loose}=${qty}</span>
-          </div>`;
-        });
-
+      data.forEach(i=>{
+        let qty=i.bundle+i.loose;
         historySection.innerHTML+=`
         <div class="card">
-          <b>Bill: ${bill}</b>
-          ${rows}
+          Bill: ${i.bill}<br>
+          ${i.name}<br>
+          ${i.bundle}/${i.loose} = ${qty}
         </div>`;
-      }
+      });
     });
 }
 </script>
