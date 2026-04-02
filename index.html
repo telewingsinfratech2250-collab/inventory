@@ -12,7 +12,6 @@ body {
   padding:15px;
 }
 
-/* LOGIN */
 #loginPage {
   height:100vh;
   display:flex;
@@ -180,6 +179,12 @@ function logout(){
 
 if(localStorage.getItem("login")=="1") showApp();
 
+/* COMMON */
+function hideAllForms(){
+  saleForm.classList.add("hidden");
+  itemForm.classList.add("hidden");
+}
+
 /* LOAD DATA */
 function loadData(force=false){
   let now=Date.now();
@@ -201,9 +206,8 @@ function loadData(force=false){
 
 /* HOME */
 function goHome(){
+  hideAllForms();
   historySection.classList.add("hidden");
-  saleForm.classList.add("hidden");
-  itemForm.classList.add("hidden");
   loadData(true);
 }
 
@@ -220,6 +224,7 @@ function loadItemsDropdown(){
 function loadColors(){
   let selected=item.value;
   let colors=globalData.filter(i=>i.name==selected).map(i=>i.color||"No Color");
+
   color.innerHTML="";
   colors.forEach(c=>{
     color.innerHTML+=`<option>${c}</option>`;
@@ -229,12 +234,12 @@ function loadColors(){
 /* DISPLAY */
 function displayData(data){
   let grouped={}, totalQty=0;
+  stockContainer.innerHTML="";
+
   data.forEach(i=>{
     if(!grouped[i.name]) grouped[i.name]=[];
     grouped[i.name].push(i);
   });
-
-  stockContainer.innerHTML="";
 
   for(let name in grouped){
     if(!name.toLowerCase().includes(searchValue)) continue;
@@ -246,8 +251,8 @@ function displayData(data){
       totalQty+=qty;
 
       rows+=`<div class="row">
-      <span>${i.color||"No Color"}</span>
-      <span>${i.bundle}/${i.loose}=${qty}</span>
+        <span>${i.color||"No Color"}</span>
+        <span>${i.bundle}/${i.loose}=${qty}</span>
       </div>`;
     });
 
@@ -271,15 +276,15 @@ function filterItems(){
 
 /* TOGGLE */
 function toggleSale(){
+  hideAllForms();
   historySection.classList.add("hidden");
-  saleForm.classList.toggle("hidden");
-  itemForm.classList.add("hidden");
+  saleForm.classList.remove("hidden");
 }
 
 function toggleItem(){
+  hideAllForms();
   historySection.classList.add("hidden");
-  itemForm.classList.toggle("hidden");
-  saleForm.classList.add("hidden");
+  itemForm.classList.remove("hidden");
 }
 
 /* SAVE */
@@ -295,7 +300,8 @@ function saveSale(){
     })
   }).then(()=>{
     alert("Saved ✅");
-    setTimeout(()=>loadData(true),800);
+    hideAllForms();
+    loadData(true);
   });
 }
 
@@ -311,14 +317,14 @@ function addItem(){
     })
   }).then(()=>{
     alert("Item Added ✅");
-    setTimeout(()=>loadData(true),800);
+    hideAllForms();
+    loadData(true);
   });
 }
 
 /* HISTORY */
 function loadHistory(){
-  saleForm.classList.add("hidden");
-  itemForm.classList.add("hidden");
+  hideAllForms();
 
   stockContainer.innerHTML="";
   historySection.classList.remove("hidden");
@@ -328,6 +334,7 @@ function loadHistory(){
     .then(r=>r.json())
     .then(data=>{
       let grouped={};
+
       data.forEach(i=>{
         if(!grouped[i.bill]) grouped[i.bill]=[];
         grouped[i.bill].push(i);
@@ -339,9 +346,10 @@ function loadHistory(){
         let rows="";
         grouped[bill].forEach(i=>{
           let qty=i.bundle+i.loose;
+
           rows+=`<div class="row">
-          <span>${i.name} (${i.color||"No Color"})</span>
-          <span>${i.bundle}/${i.loose}=${qty}</span>
+            <span>${i.name} (${i.color||"No Color"})</span>
+            <span>${i.bundle}/${i.loose}=${qty}</span>
           </div>`;
         });
 
